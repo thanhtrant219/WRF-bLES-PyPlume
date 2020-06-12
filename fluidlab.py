@@ -157,7 +157,8 @@ def omega_single(datau,datav,dataw,dx,dy,dz,t):
     gu = np.gradient(datau[:,:,:,t],dx,dy,dz)
     gv = np.gradient(datav[:,:,:,t],dx,dy,dz)
     gw = np.gradient(dataw[:,:,:,t],dx,dy,dz)
-
+    
+  
     GV = np.array([[gu[0],gv[0],gw[0]],[gu[1],gv[1],gw[1]],[gu[2],gv[2],gw[2]]])
     GVT = transpose(GV)
 
@@ -170,7 +171,8 @@ def omega_single(datau,datav,dataw,dx,dy,dz,t):
     a = trace(ATA)
     b = trace(BTB)
     ef=0.001*np.max(b-a)
-    return (b/(a+b+ef))
+    result = (b/(a+b+ef))
+    return result
 
 
 # In[10]:
@@ -181,9 +183,9 @@ def omega(datau,datav,dataw,dx,dy,dz):
     if (sameshape3(datau,datav,dataw) is False):
         return
     np.seterr(divide='ignore', invalid='ignore')
-    datau,datav,dataw = uvw_wcdless(datau,datav,dataw)
+#     datau,datav,dataw = uvw_wcdless(datau,datav,dataw)
     
-    ome=np.zeros((datau.shape[0],datau.shape[1],datau.shape[2],datau.shape[3]),dtype=np.float16)
+    ome=np.zeros((datau.shape[0],datau.shape[1],datau.shape[2],datau.shape[3]),dtype=np.float32)
     for t in range(0,datau.shape[3]):
         ome[:,:,:,t] = omega_single(datau,datav,dataw,dx,dy,dz,t)
     ome = np.nan_to_num(ome)

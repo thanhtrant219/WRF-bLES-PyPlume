@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+ #!/usr/bin/env python
 # coding: utf-8
 
 # In[1]:
@@ -159,7 +159,7 @@ def omega_single(datau,datav,dataw,dx,dy,dz,t):
     gw = np.gradient(dataw[:,:,:,t],dx,dy,dz)
     
   
-    GV = np.array([[gu[1],gv[1],gw[1]],[gu[0],gv[0],gw[0]],[gu[2],gv[2],gw[2]]])
+    GV = np.array([[gu[0],gv[0],gw[0]],[gu[1],gv[1],gw[1]],[gu[2],gv[2],gw[2]]])
     GVT = transpose(GV)
 
     A = 0.5*(GV+GVT)
@@ -414,7 +414,7 @@ def lamb2sec(datau,datav,dataw,dx,dy,dz,nt):
         lamb2[:,:,:,i] = results[i]     
     return lamb2
 
-def lambda2t(datau,datav,dataw,dx=40,dy=40,dz=10):
+def lambda2(datau,datav,dataw,dx=40,dy=40,dz=10):
     if (sameshape3(datau,datav,dataw) is False):
         return
     nx,ny,nz,nt = shape(datau)
@@ -435,7 +435,7 @@ def lambda2t(datau,datav,dataw,dx=40,dy=40,dz=10):
         if (nte > nt):
             nte = nt   
     return lamb2
-def lambda2(datau,datav,dataw,dx=40,dy=40,dz=10):
+def lambda2t(datau,datav,dataw,dx=40,dy=40,dz=10):
     if (sameshape3(datau,datav,dataw) is False):
         return
     nx,ny,nz,nt = shape(datau)

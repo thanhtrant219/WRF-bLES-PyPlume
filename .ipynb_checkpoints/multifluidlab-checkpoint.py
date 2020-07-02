@@ -42,7 +42,7 @@ def lambmatrix(S,Ome,nx,ny,nz):
                 for j in range(0,ny):
                     for k in range(0,nz):
                         w = LA.eigvals(S[:,:,i,j,k].dot(S[:,:,i,j,k])+Ome[:,:,i,j,k].dot(Ome[:,:,i,j,k]))
-                        w = np.sort(-w)
+                        w = np.sort(w)
                         if w[1]<0:
                             lamb2[i,j,k] = w[1]
     return lamb2
@@ -53,10 +53,11 @@ def lambda2(datau,datav,dataw,t,dx=40,dy=40,dz=10,dt=10):
 #     print('{}\r'.format(percent), end="")
     print(t)
         
-    gu = np.gradient(datau[:,:,:,t],dx,dy,dz)
-    gv = np.gradient(datav[:,:,:,t],dx,dy,dz)
-    gw = np.gradient(dataw[:,:,:,t],dx,dy,dz)             
-    J = np.array([gu,gv,gw])
+    dudy,dudx,dudz= np.gradient(datau[:,:,:,t],dx,dy,dz)
+    dvdy,dvdx,dvdz = np.gradient(datav[:,:,:,t],dx,dy,dz)
+    dwdy,dwdx,dwdz = np.gradient(dataw[:,:,:,t],dx,dy,dz)
+
+    J = np.array([[dudx,dudy,dudz],[dvdx,dvdy,dvdz],[dwdx,dwdy,dwdz]])
     JT = transpose(J)
     S = (J+JT)*0.5
     Ome = (J-JT)*0.5

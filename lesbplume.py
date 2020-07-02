@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+ #!/usr/bin/env python
 # coding: utf-8
 
 # In[1]:
@@ -414,7 +414,7 @@ def lamb2sec(datau,datav,dataw,dx,dy,dz,nt):
         lamb2[:,:,:,i] = results[i]     
     return lamb2
 
-def lambda2t(datau,datav,dataw,dx=40,dy=40,dz=10):
+def lambda2(datau,datav,dataw,dx=40,dy=40,dz=10):
     if (sameshape3(datau,datav,dataw) is False):
         return
     nx,ny,nz,nt = shape(datau)
@@ -435,7 +435,7 @@ def lambda2t(datau,datav,dataw,dx=40,dy=40,dz=10):
         if (nte > nt):
             nte = nt   
     return lamb2
-def lambda2(datau,datav,dataw,dx=40,dy=40,dz=10):
+def lambda2t(datau,datav,dataw,dx=40,dy=40,dz=10):
     if (sameshape3(datau,datav,dataw) is False):
         return
     nx,ny,nz,nt = shape(datau)
@@ -489,3 +489,19 @@ def cart2pol(datau,datav,dataw,dx,dy,dz):
 
 
 
+def savecsv(filedata,nametypedata):
+    import time
+    tic = time.perf_counter()
+    import csv
+    filename = nametypedata+'.csv'
+    nx,ny,nz,nt = filedata.shape[0],filedata.shape[1],filedata.shape[2],filedata.shape[3]
+    filedata = np.reshape(filedata, (nx*ny*nz*nt,1), order="F")
+    # writing to csv file  
+    with open(filename, 'w') as csvfile:  
+        # creating a csv writer object  
+        csvwriter = csv.writer(csvfile) 
+        # writing the data rows   
+        csvwriter.writerows(filedata)
+
+    toc1 = time.perf_counter()
+    print(f"Time: {((toc1 - tic)/60):0.4f} minutes")

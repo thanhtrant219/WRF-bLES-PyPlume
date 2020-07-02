@@ -1,6 +1,6 @@
 INTRO:
 
-LESbplume.py is a python module that included functions to process and visualize LES bplume data.
+LESbplume.py is a python package that included functions to process and visualize LES bplume data.
 
 CONTENTS: 
 

@@ -505,3 +505,193 @@ def savecsv(filedata,nametypedata):
 
     toc1 = time.perf_counter()
     print(f"Time: {((toc1 - tic)/60):0.4f} minutes")
+
+
+
+    
+def isosurface(data,isovalue,name, figsize =30,frame = 5,angle = 60,dx=40,dy=40,dz=10,D=400):
+    import os
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+    from matplotlib import animation
+    from skimage import measure
+    if not os.path.exists(name):
+        os.makedirs(name)
+    nx, ny, nz, nt = shape(data)
+    t = 0 
+    while(t<nt):
+        
+        percent = np.str(np.round(t/nt*100))+"%"
+        print('{}\r'.format(percent), end="")
+        
+        title_name  = name+' Time:'+str(t)
+        
+        fr = 0
+        vol = data[:,:,:,t]
+        datamax = vol.max()
+        datamin = vol.min()
+        while (isovalue>=datamax or isovalue <=datamin):
+            t = t+1
+            fr = fr+1
+            if (fr==frame):
+                fr = 0
+            vol = data[:,:,:,t]
+            datamax = vol.max()
+            datamin = vol.min()
+
+        verts, faces, _, _ = measure.marching_cubes_lewiner(vol, isovalue, spacing=(dx, dy, dz))
+        fig = plt.figure(figsize=(figsize, figsize*2.5))
+        # plt.rcParams['savefig.facecolor'] = "0.8"
+        ax = fig.add_subplot(111, projection='3d',facecolor='w',label='Inline label')
+
+        mesh = Poly3DCollection(verts[faces])
+        mesh.set_edgecolor('k')
+        ax.add_collection3d(mesh)
+        ax.view_init(15,angle)
+
+        ax.set_xlabel("X/D",fontsize = 50,labelpad=40)
+        ax.set_ylabel("Y/D",fontsize = 50,labelpad=40)
+        ax.set_zlabel("Z/D",fontsize = 50,labelpad=100)
+        # Title:
+        namel = len(title_name)
+        namexpos = 0.5-0.01*namel   
+        ax.text2D(namexpos, 0.85, title_name, transform=ax.transAxes,fontsize = 65)
+
+        ticnum = 11
+        ticnumz = 14
+        xaxis = []
+        for x in range (np.int(-(ticnum-1)/2),np.int((ticnum+1)/2)):
+            xaxis.append(((nx-1)*dx/(ticnum-1)*x)/D)
+        yaxis = []
+        for y in range (np.int(-(ticnum-1)/2),np.int((ticnum-1)/2)):
+            yaxis.append(((ny-1)*dy/(ticnum-1)*y)/D)
+        zaxis = []
+        for z in range (0,np.int((ticnumz+1))):
+            zaxis.append(z*(dz*nz/ticnumz)/D)
+        ax.set_xticks(np.linspace(0, nx*dx, ticnum))
+        ax.set_yticks(np.linspace(0, ny*dy, ticnum))
+        ax.set_xticklabels(xaxis)
+        ax.set_yticklabels(yaxis)
+        ax.invert_yaxis()
+        ax.set_zticks(np.linspace(0, nz*dz, ticnumz+1))
+        ax.set_zticklabels(zaxis) 
+        ax.tick_params(axis='both', which='major', labelsize=30)
+        plt.tight_layout()
+        
+
+        bbox = fig.bbox_inches.from_bounds(1, 9, 28,58 )
+        if (t <10):
+            picname = '00'+str(t)
+        if (t >=10 and t<100):
+            picname = '0'+str(t)
+        if (t >= 100):
+            picname = str(t)
+        filename=name+'/'+picname+'.png'
+        plt.savefig(filename, bbox_inches=bbox)
+        if (fr==0):
+            fr = frame
+        else:
+            fr = frame - fr
+        t = t + fr
+        
+## Video Generating function 
+def generate_video(path):
+    print('Please install cv2 library by run line  (pip install opencv-python) in the command prompt')
+    import os 
+    import cv2 
+    image_folder = '.' # make sure to use your folder 
+    end = len(path)
+    for i in range (end):
+        if (path[i] == "\\" ):
+            j = i +1
+    filename = path[j:end]  
+    video_name = filename + '.avi'
+    os.chdir(path) 
+      
+    images = [img for img in os.listdir(image_folder) 
+              if img.endswith(".jpg") or
+                 img.endswith(".jpeg") or
+                 img.endswith("png")] 
+     
+    # Array images should only consider 
+    # the image files ignoring others if any 
+#     print(images)  
+  
+    frame = cv2.imread(os.path.join(image_folder, images[0])) 
+  
+    # setting the frame width, height width 
+    # the width, height of first image 
+    height, width, layers = frame.shape   
+  
+    video = cv2.VideoWriter(video_name, 0, 1, (width, height))  
+  
+    # Appending the images to the video one by one 
+    for image in images:  
+        video.write(cv2.imread(os.path.join(image_folder, image)))  
+      
+    # Deallocating memories taken for window creation 
+    cv2.destroyAllWindows()  
+    video.release()  # releasing the video generated 
+    
+def isosurface_timestep(data,timestep,isovalue,name, figsize =30,frame = 9,dx=40,dy=40,dz=10,D=400):
+    import os
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+    from matplotlib import animation
+    from skimage import measure
+    nx, ny, nz, nt = shape(data)
+    if not os.path.exists(name):
+        os.makedirs(name)
+    angle = 0 
+    while(angle<=360):
+        
+        percent = np.str(np.round(angle/360*100))+"%"
+        print('{}\r'.format(percent), end="")
+        
+        nameg  = name+' Time:'+str(timestep)+' Angle:'+str(angle)
+        vol = data[:,:,:,timestep]
+        verts, faces, _, _ = measure.marching_cubes_lewiner(vol, isovalue, spacing=(dx, dy, dz))
+        fig = plt.figure(figsize=(figsize, figsize*2.5))
+        ax = fig.add_subplot(111, projection='3d',facecolor='w',label='Inline label')
+
+        mesh = Poly3DCollection(verts[faces])
+        mesh.set_edgecolor('k')
+        ax.add_collection3d(mesh)
+        ax.view_init(15,angle)
+
+        ax.set_xlabel("X/D",fontsize = 50,labelpad=40)
+        ax.set_ylabel("Y/D",fontsize = 50,labelpad=40)
+        ax.set_zlabel("Z/D",fontsize = 50,labelpad=100)
+        # Title:
+        namel = len(nameg)
+        namexpos = 0.5-0.01*namel   
+        ax.text2D(namexpos, 0.85, nameg, transform=ax.transAxes,fontsize = 65)
+
+        ticnum = 11
+        ticnumz = 14
+        xaxis = []
+        for x in range (np.int(-(ticnum-1)/2),np.int((ticnum+1)/2)):
+            xaxis.append(((nx-1)*dx/(ticnum-1)*x)/D)
+        yaxis = []
+        for y in range (np.int(-(ticnum-1)/2),np.int((ticnum-1)/2)):
+            yaxis.append(((ny-1)*dy/(ticnum-1)*y)/D)
+        zaxis = []
+        for z in range (0,np.int((ticnumz+1))):
+            zaxis.append(z*(dz*nz/ticnumz)/D)
+        ax.set_xticks(np.linspace(0, nx*dx, ticnum))
+        ax.set_yticks(np.linspace(0, ny*dy, ticnum))
+        ax.set_xticklabels(xaxis)
+        ax.set_yticklabels(yaxis)
+        ax.invert_yaxis()
+        ax.set_zticks(np.linspace(0, nz*dz, ticnumz+1))
+        ax.set_zticklabels(zaxis) 
+        ax.tick_params(axis='both', which='major', labelsize=30)
+
+        plt.tight_layout()
+        filename=name+'_T'+str(timestep)+'/'+name+'_t'+str(angle)+'.png'
+#         print(filename)
+
+        bbox = fig.bbox_inches.from_bounds(1, 9, 28,58 )
+        plt.savefig(name+'/'+name+' '+str(angle)+'.png', bbox_inches=bbox)
+        angle = angle + frame
+        

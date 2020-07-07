@@ -509,7 +509,7 @@ def savecsv(filedata,nametypedata):
 
 
     
-def isosurface(data,isovalue,name, figsize =30,frame = 5,angle = 60,dx=40,dy=40,dz=10,D=400):
+def isosurface(data,isovalue,name, dpi =30,frame = 5,angle = 60,dx=40,dy=40,dz=10,D=400):
     import os
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -519,6 +519,8 @@ def isosurface(data,isovalue,name, figsize =30,frame = 5,angle = 60,dx=40,dy=40,
         os.makedirs(name)
     nx, ny, nz, nt = shape(data)
     t = 0 
+    fig = plt.figure(figsize=(30, 30*2.5))
+    ax = fig.add_subplot(111, projection='3d',facecolor='w',label='Inline label')
     while(t<nt):
         
         percent = np.str(np.round(t/nt*100))+"%"
@@ -540,9 +542,6 @@ def isosurface(data,isovalue,name, figsize =30,frame = 5,angle = 60,dx=40,dy=40,
             datamin = vol.min()
 
         verts, faces, _, _ = measure.marching_cubes_lewiner(vol, isovalue, spacing=(dx, dy, dz))
-        fig = plt.figure(figsize=(figsize, figsize*2.5))
-        # plt.rcParams['savefig.facecolor'] = "0.8"
-        ax = fig.add_subplot(111, projection='3d',facecolor='w',label='Inline label')
 
         mesh = Poly3DCollection(verts[faces])
         mesh.set_edgecolor('k')
@@ -587,18 +586,21 @@ def isosurface(data,isovalue,name, figsize =30,frame = 5,angle = 60,dx=40,dy=40,
         if (t >= 100):
             picname = str(t)
         filename=name+'/'+picname+'.png'
-        plt.savefig(filename, bbox_inches=bbox)
+        plt.savefig(filename, bbox_inches=bbox,dpi = dpi)
+        plt.cla()
         if (fr==0):
             fr = frame
         else:
             fr = frame - fr
-        t = t + fr
+        t = t + fr 
+    print('Done.') 
         
 ## Video Generating function 
-def generate_video(path):
+def generate_video(path,videopath = 'None',speed = 5):
     print('Please install cv2 library by run line  (pip install opencv-python) in the command prompt')
     import os 
     import cv2 
+    import numpy as np
     image_folder = '.' # make sure to use your folder 
     end = len(path)
     for i in range (end):
@@ -622,8 +624,10 @@ def generate_video(path):
     # setting the frame width, height width 
     # the width, height of first image 
     height, width, layers = frame.shape   
-  
-    video = cv2.VideoWriter(video_name, 0, 1, (width, height))  
+    speed = np.int(speed)
+    if (videopath != 'None'):
+        video_name = videopath +'\\'+video_name
+    video = cv2.VideoWriter(video_name, 0, speed, (width, height))  
   
     # Appending the images to the video one by one 
     for image in images:  
@@ -633,7 +637,7 @@ def generate_video(path):
     cv2.destroyAllWindows()  
     video.release()  # releasing the video generated 
     
-def isosurface_timestep(data,timestep,isovalue,name, figsize =30,frame = 9,dx=40,dy=40,dz=10,D=400):
+def isosurface_timestep(data,timestep,isovalue,name, dpi =30,frame = 9,dx=40,dy=40,dz=10,D=400):
     import os
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -651,7 +655,7 @@ def isosurface_timestep(data,timestep,isovalue,name, figsize =30,frame = 9,dx=40
         nameg  = name+' Time:'+str(timestep)+' Angle:'+str(angle)
         vol = data[:,:,:,timestep]
         verts, faces, _, _ = measure.marching_cubes_lewiner(vol, isovalue, spacing=(dx, dy, dz))
-        fig = plt.figure(figsize=(figsize, figsize*2.5))
+        fig = plt.figure(figsize=(30, 30*2.5))
         ax = fig.add_subplot(111, projection='3d',facecolor='w',label='Inline label')
 
         mesh = Poly3DCollection(verts[faces])
@@ -689,9 +693,8 @@ def isosurface_timestep(data,timestep,isovalue,name, figsize =30,frame = 9,dx=40
 
         plt.tight_layout()
         filename=name+'_T'+str(timestep)+'/'+name+'_t'+str(angle)+'.png'
-#         print(filename)
 
         bbox = fig.bbox_inches.from_bounds(1, 9, 28,58 )
-        plt.savefig(name+'/'+name+' '+str(angle)+'.png', bbox_inches=bbox)
+        plt.savefig(name+'/'+name+' '+str(angle)+'.png', bbox_inches=bbox, dpi=dpi)
         angle = angle + frame
         

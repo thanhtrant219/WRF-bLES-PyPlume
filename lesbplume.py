@@ -159,7 +159,7 @@ def omega_single(datau,datav,dataw,dx,dy,dz,t):
     gw = np.gradient(dataw[:,:,:,t],dx,dy,dz)
     
   
-    GV = np.array([[gu[0],gv[0],gw[0]],[gu[1],gv[1],gw[1]],[gu[2],gv[2],gw[2]]])
+    GV = np.array([[gu[1],gv[1],gw[1]],[gu[0],gv[0],gw[0]],[gu[2],gv[2],gw[2]]])
     GVT = transpose(GV)
 
     A = 0.5*(GV+GVT)
@@ -189,6 +189,7 @@ def omega(datau,datav,dataw,dx,dy,dz):
     for t in range(0,datau.shape[3]):
         ome[:,:,:,t] = omega_single(datau,datav,dataw,dx,dy,dz,t)
     ome = np.nan_to_num(ome)
+    print('Omega Vortex Identification Done')
     return ome
 
 
@@ -200,17 +201,17 @@ def vorticity(datau,datav,dataw,dx,dy,dz,dt):
     if (sameshape3(datau,datav,dataw) is False):
         return
     print("To calculate vorticity need at least 32gbs of RAM.")
-    gu = np.gradient(datau,45,45,10,10)
+    gu = np.gradient(datau,dx,dy,dz,dt)
     gu1 = np.array(gu[1],dtype =np.float32)
     gu2 = np.array(gu[2],dtype =np.float32)
     del gu
     
-    gv = np.gradient(datav,45,45,10,10)
+    gv = np.gradient(datav,dx,dy,dz,dt)
     gv0 = np.array(gv[0],dtype =np.float32)
     gv2 = np.array(gv[2],dtype =np.float32)
     del gv
     
-    gw = np.gradient(dataw,45,45,10,10)
+    gw = np.gradient(dataw,dx,dy,dz,dt)
     gw0 = np.array(gw[0],dtype =np.float32)
     gw1 = np.array(gw[1],dtype =np.float32)
     del gw
@@ -414,12 +415,13 @@ def lamb2sec(datau,datav,dataw,dx,dy,dz,nt):
         lamb2[:,:,:,i] = results[i]     
     return lamb2
 
-def lambda2(datau,datav,dataw,dx=40,dy=40,dz=10):
+def lambda2multicore(datau,datav,dataw,dx=40,dy=40,dz=10):
+    import multiprocessing as mp
     if (sameshape3(datau,datav,dataw) is False):
         return
     nx,ny,nz,nt = shape(datau)
     lamb2=np.zeros((nx,ny,nz,nt),dtype=np.float32)
-    sectime =np.int(np.round(nt/10))
+    sectime =np.int(mp.cpu_count()*10)
     nts = 0
     nte = nts+sectime
     while (nts < nt):
@@ -435,18 +437,31 @@ def lambda2(datau,datav,dataw,dx=40,dy=40,dz=10):
         if (nte > nt):
             nte = nt   
     return lamb2
-def lambda2t(datau,datav,dataw,dx=40,dy=40,dz=10):
+
+def lambda2single(datau,datav,dataw,t,dx=40,dy=40,dz=10,dt=10):
+    from numpy import linalg as LA
+    nx,ny,nz,nt = shape(datau)         
+    percent = np.str(np.round(t/nt*100))+"%"
+    print('{}\r'.format(percent), end="")
+    print(t)
+        
+    dudy,dudx,dudz= np.gradient(datau[:,:,:,t],dx,dy,dz)
+    dvdy,dvdx,dvdz = np.gradient(datav[:,:,:,t],dx,dy,dz)
+    dwdy,dwdx,dwdz = np.gradient(dataw[:,:,:,t],dx,dy,dz)
+
+    J = np.array([[dudx,dudy,dudz],[dvdx,dvdy,dvdz],[dwdx,dwdy,dwdz]])
+    JT = transpose(J)
+    S = (J+JT)*0.5
+    Ome = (J-JT)*0.5
+    lamb2 = lambmatrix(S,Ome,nx,ny,nz)
+    return lamb2
+def lambda2(datau,datav,dataw,dx=40,dy=40,dz=10):
     if (sameshape3(datau,datav,dataw) is False):
         return
     nx,ny,nz,nt = shape(datau)
-    import multifluidlab
-    import multiprocessing as mp
-    from multiprocessing import Pool
-    pool = mp.Pool(mp.cpu_count())
-    results = pool.starmap(multifluidlab.lambda2,[(datau,datav,dataw,t,dx,dy,dz) for t in range(nt)])
-    lamb2=np.zeros((nx,ny,nz,nt),dtype=np.float32)
     for i in range(nt):
-        lamb2[:,:,:,i] = results[i]     
+        lamb2[:,:,:,i] = lambda2single(datau,datav,dataw,t,dx,dy,dz)
+    print('{}\r'.format("Lambda2 Vortex Identification Completed "), end="")
     return lamb2
 def cart2pol(datau,datav,dataw,dx,dy,dz):
 
@@ -488,7 +503,7 @@ def cart2pol(datau,datav,dataw,dx,dy,dz):
     return Ur, Utheta, dataw 
 
 
-
+#saving data into csvfile
 def savecsv(filedata,nametypedata):
     import time
     tic = time.perf_counter()
@@ -504,8 +519,56 @@ def savecsv(filedata,nametypedata):
         csvwriter.writerows(filedata)
 
     toc1 = time.perf_counter()
-    print(f"Time: {((toc1 - tic)/60):0.4f} minutes")
+    print(f"Saved"+filename+"Time: {((toc1 - tic)/60):0.4f} minutes")
 
+## Video Generating function 
+def generate_video(path,videopath = 'None',speed = 5):
+    print('Please install cv2 library by run line  (pip install opencv-python) in the command prompt')
+    import os 
+    import cv2 
+    import numpy as np
+    image_folder = '.' # make sure to use your folder 
+    end = len(path)
+    print('hi')
+    j = 0
+    for i in range (end):
+        if (path[i] == "\\" ):
+            j = i +1
+    if (j!=0):
+        filename = path[j:end]
+    else:
+        filename = path
+    video_name = filename + '.avi'
+    os.chdir(path) 
+      
+    images = [img for img in os.listdir(image_folder) 
+              if img.endswith(".jpg") or
+                 img.endswith(".jpeg") or
+                 img.endswith("png")] 
+     
+    # Array images should only consider 
+    # the image files ignoring others if any 
+#     print(images)  
+  
+    frame = cv2.imread(os.path.join(image_folder, images[0])) 
+  
+    # setting the frame width, height width 
+    # the width, height of first image 
+    height, width, layers = frame.shape   
+    speed = np.int(speed)
+    if (videopath != 'None'):
+        video_name = videopath +'\\'+video_name
+#         if not os.path.exists(videopath):
+#             os.makedirs(videopath)
+    video = cv2.VideoWriter(video_name, 0, speed, (width, height))  
+  
+    # Appending the images to the video one by one 
+    for image in images:  
+        video.write(cv2.imread(os.path.join(image_folder, image)))  
+      
+    # Deallocating memories taken for window creation 
+    cv2.destroyAllWindows()  
+    video.release()  # releasing the video generated 
 
 
     
@@ -525,7 +588,6 @@ def isosurface(data,isovalue,name, dpi =30,frame = 5,angle = 60,dx=40,dy=40,dz=1
         
         percent = np.str(np.round(t/nt*100))+"%"
         print('{}\r'.format(percent), end="")
-        
         title_name  = name+' Time:'+str(t)
         
         fr = 0
@@ -594,48 +656,7 @@ def isosurface(data,isovalue,name, dpi =30,frame = 5,angle = 60,dx=40,dy=40,dz=1
             fr = frame - fr
         t = t + fr 
     print('Done.') 
-        
-## Video Generating function 
-def generate_video(path,videopath = 'None',speed = 5):
-    print('Please install cv2 library by run line  (pip install opencv-python) in the command prompt')
-    import os 
-    import cv2 
-    import numpy as np
-    image_folder = '.' # make sure to use your folder 
-    end = len(path)
-    for i in range (end):
-        if (path[i] == "\\" ):
-            j = i +1
-    filename = path[j:end]  
-    video_name = filename + '.avi'
-    os.chdir(path) 
       
-    images = [img for img in os.listdir(image_folder) 
-              if img.endswith(".jpg") or
-                 img.endswith(".jpeg") or
-                 img.endswith("png")] 
-     
-    # Array images should only consider 
-    # the image files ignoring others if any 
-#     print(images)  
-  
-    frame = cv2.imread(os.path.join(image_folder, images[0])) 
-  
-    # setting the frame width, height width 
-    # the width, height of first image 
-    height, width, layers = frame.shape   
-    speed = np.int(speed)
-    if (videopath != 'None'):
-        video_name = videopath +'\\'+video_name
-    video = cv2.VideoWriter(video_name, 0, speed, (width, height))  
-  
-    # Appending the images to the video one by one 
-    for image in images:  
-        video.write(cv2.imread(os.path.join(image_folder, image)))  
-      
-    # Deallocating memories taken for window creation 
-    cv2.destroyAllWindows()  
-    video.release()  # releasing the video generated 
     
 def isosurface_timestep(data,timestep,isovalue,name, dpi =30,frame = 9,dx=40,dy=40,dz=10,D=400):
     import os
@@ -696,7 +717,66 @@ def isosurface_timestep(data,timestep,isovalue,name, dpi =30,frame = 9,dx=40,dy=
         filename=name+'_T'+str(timestep)+'/'+name+'_t'+str(angle)+'.png'
 
         bbox = fig.bbox_inches.from_bounds(1, 9, 28,58 )
-        plt.savefig(name+'_'+str(timestep)+'/'+name+' '+str(angle)+'.png', bbox_inches=bbox, dpi=dpi)
+        plt.savefig(name+'_('+str(timestep)+')/'+name+' '+str(angle)+'.png', bbox_inches=bbox, dpi=dpi)
         plt.cla()
         angle = angle + frame
         
+def uvw_import(path,filename,start,end,T=False,nx=45,ny=45,nz=700):
+    import pandas as pd #reading data from csv
+    import pandas as pd #reading data from csv
+    sk = start*nx*ny*nz
+    nt = end - start
+    n = np.int(nx*ny*nz*nt)
+    dfu = pd.read_csv(path+'\\'+filename+'_U.csv',skiprows = sk,nrows = 2, header = None)
+    check = str(dfu[0][0])
+    if(check.isnumeric()):
+        print('')
+    else:
+        sk = sk+1
+
+    #T data
+    if (T==True):
+        dft = pd.read_csv(path+'\\'+filename+'_T.csv',skiprows = sk,nrows = n, dtype =np.float32, header = None)
+        datat = dft.to_numpy()
+        datat = np.reshape(datat, (nx,ny,nz,nt), order="F") #reshaping data to (45,45,700,timestep) in the "F" order
+        del dft
+    else:
+        datat = None
+
+    # U data
+    dfu = pd.read_csv(path+'\\'+filename+'_U.csv',skiprows = sk,nrows = n, dtype =np.float32, header = None)
+    datau = dfu.to_numpy()
+    datau = np.reshape(datau,  (nx,ny,nz,nt), order="F")
+    del dfu
+
+    # V data
+    dfv = pd.read_csv(path+'\\'+filename+'_V.csv',skiprows = sk,nrows = n, dtype =np.float32, header = None)
+    datav = dfv.to_numpy()
+    datav = np.reshape(datav,  (nx,ny,nz,nt), order="F")
+    del dfv
+
+    # W data
+    dfw = pd.read_csv(path+'\\'+filename+'_U.csv',skiprows = sk,nrows = n, dtype =np.float32, header = None)
+    dataw = dfw.to_numpy()
+    dataw = np.reshape(dataw,  (nx,ny,nz,nt), order="F")
+    del dfw
+    
+    return datau,datav,dataw,datat
+
+def datasingle_import(path,filename,start,end,nx=45,ny=45,nz=700):
+    import pandas as pd #reading data from csv
+    import pandas as pd #reading data from csv
+    sk = start*nx*ny*nz
+    nt = end - start
+    n = np.int(nx*ny*nz*nt)
+    df = pd.read_csv(path+'\\'+filename+'.csv',skiprows = sk,nrows = 2, header = None)
+    check = str(int(df[0][0]))
+    if(check.isnumeric()):
+        print('')
+    else:
+        sk = sk+1
+    df = pd.read_csv(path+'\\'+filename+'.csv',skiprows = sk,nrows = n, dtype =np.float32, header = None)
+    data = df.to_numpy()
+    data = np.reshape(data,  (nx,ny,nz,nt), order="F")
+    del df
+    return data

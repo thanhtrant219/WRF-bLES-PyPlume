@@ -529,7 +529,6 @@ def generate_video(path,videopath = 'None',speed = 5):
     import numpy as np
     image_folder = '.' # make sure to use your folder 
     end = len(path)
-    print('hi')
     j = 0
     for i in range (end):
         if (path[i] == "\\" ):
@@ -762,6 +761,57 @@ def uvw_import(path,filename,start,end,T=False,nx=45,ny=45,nz=700):
     del dfw
     
     return datau,datav,dataw,datat
+
+def datasingle_import(path,filename,start,end,nx=45,ny=45,nz=700):
+    import pandas as pd #reading data from csv
+    import pandas as pd #reading data from csv
+    sk = start*nx*ny*nz
+    nt = end - start
+    n = np.int(nx*ny*nz*nt)
+    df = pd.read_csv(path+'\\'+filename+'.csv',skiprows = sk,nrows = 2, header = None)
+    check = str(int(df[0][0]))
+    if(check.isnumeric()):
+        print('')
+    else:
+        sk = sk+1
+    df = pd.read_csv(path+'\\'+filename+'.csv',skiprows = sk,nrows = n, dtype =np.float32, header = None)
+    data = df.to_numpy()
+    data = np.reshape(data,  (nx,ny,nz,nt), order="F")
+    del df
+    return data
+
+def uvw_import(path,filename,start,end,nx=45,ny=45,nz=700):
+    import pandas as pd #reading data from csv
+    import pandas as pd #reading data from csv
+    sk = start*nx*ny*nz
+    nt = end - start
+    n = np.int(nx*ny*nz*nt)
+    dfu = pd.read_csv(path+'\\'+filename+'_U.csv',skiprows = sk,nrows = 2, header = None)
+    check = str(dfu[0][0])
+    if(check.isnumeric()):
+        print('')
+    else:
+        sk = sk+1
+
+    # U data
+    dfu = pd.read_csv(path+'\\'+filename+'_U.csv',skiprows = sk,nrows = n, dtype =np.float32, header = None)
+    datau = dfu.to_numpy()
+    datau = np.reshape(datau,  (nx,ny,nz,nt), order="F")
+    del dfu
+
+    # V data
+    dfv = pd.read_csv(path+'\\'+filename+'_V.csv',skiprows = sk,nrows = n, dtype =np.float32, header = None)
+    datav = dfv.to_numpy()
+    datav = np.reshape(datav,  (nx,ny,nz,nt), order="F")
+    del dfv
+
+    # W data
+    dfw = pd.read_csv(path+'\\'+filename+'_U.csv',skiprows = sk,nrows = n, dtype =np.float32, header = None)
+    dataw = dfw.to_numpy()
+    dataw = np.reshape(dataw,  (nx,ny,nz,nt), order="F")
+    del dfw
+    
+    return datau,datav,dataw
 
 def datasingle_import(path,filename,start,end,nx=45,ny=45,nz=700):
     import pandas as pd #reading data from csv

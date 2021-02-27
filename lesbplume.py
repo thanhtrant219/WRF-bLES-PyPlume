@@ -782,11 +782,13 @@ def loadmat(filename):
     try:
         data = io.loadmat(filename)
         key = sorted(data.keys(),reverse=True)[0]
+#         key = sorted(data.keys())[0]
         data = data[key]
         data = np.array(data)
     except:
         data = mat73.loadmat(filename)
         key = sorted(data.keys(),reverse=True)[0]
+#         key = sorted(data.keys())[0]
         data = data[key]
         data = np.array(data)
     return data

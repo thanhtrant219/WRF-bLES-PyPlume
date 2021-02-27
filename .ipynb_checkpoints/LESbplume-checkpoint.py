@@ -7,6 +7,7 @@
 import numpy as np
 import csv
 import pandas as pd
+import matplotlib.pyplot as plt
 import time
 import sys
 
@@ -197,7 +198,7 @@ def omega(datau,datav,dataw,dx,dy,dz):
 
 
 # Memories problems
-def vorticity(datau,datav,dataw,dx,dy,dz,dt):
+def vorticity(datau,datav,dataw,dx=40,dy=40,dz=10,dt=10):
     if (sameshape3(datau,datav,dataw) is False):
         return
     print("To calculate vorticity need at least 32gbs of RAM.")
@@ -318,7 +319,7 @@ def plumehalfgraph(dataw,datat,name,threshold=0.36788,dx=40,dy=40,dz=10,D=400):
     plt.figure(figsize=(10,10))
     plt.ylabel('Z/D')
     plt.xlabel('halfwidth')
-    plt.title(name +' plume-half graph')# giving a title to my graph
+    plt.title(name + 'plume-half graph')# giving a title to my graph
     plt.plot(graphyt, graphxt,label='Tmean')
     plt.plot(graphyw, graphxw,label='Wmean')
     plt.legend()
@@ -421,10 +422,12 @@ def lambda2multicore(datau,datav,dataw,dx=40,dy=40,dz=10):
         return
     nx,ny,nz,nt = shape(datau)
     lamb2=np.zeros((nx,ny,nz,nt),dtype=np.float32)
-    sectime =np.int(mp.cpu_count()*10)
+#     sectime =np.int(mp.cpu_count()*6)
+    sectime =24
     nts = 0
     nte = nts+sectime
     while (nts < nt):
+        print(nts)
         u = datau[:,:,:,nts:nte]
         v = datav[:,:,:,nts:nte]
         w = dataw[:,:,:,nts:nte]
@@ -440,10 +443,8 @@ def lambda2multicore(datau,datav,dataw,dx=40,dy=40,dz=10):
 
 def lambda2single(datau,datav,dataw,t,dx=40,dy=40,dz=10,dt=10):
     from numpy import linalg as LA
-    nx,ny,nz,nt = shape(datau)         
-    percent = np.str(np.round(t/nt*100))+"%"
-    print('{}\r'.format(percent), end="")
-    print(t)
+    import multifluidlab
+    nx,ny,nz,nt = shape(datau)        
         
     dudy,dudx,dudz= np.gradient(datau[:,:,:,t],dx,dy,dz)
     dvdy,dvdx,dvdz = np.gradient(datav[:,:,:,t],dx,dy,dz)
@@ -453,18 +454,22 @@ def lambda2single(datau,datav,dataw,t,dx=40,dy=40,dz=10,dt=10):
     JT = transpose(J)
     S = (J+JT)*0.5
     Ome = (J-JT)*0.5
-    lamb2 = lambmatrix(S,Ome,nx,ny,nz)
+    lamb2 = multifluidlab.lambmatrix(S,Ome,nx,ny,nz)
     return lamb2
+
 def lambda2(datau,datav,dataw,dx=40,dy=40,dz=10):
     if (sameshape3(datau,datav,dataw) is False):
         return
     nx,ny,nz,nt = shape(datau)
+    lamb2 = np.zeros((nx,ny,nz,nt),dtype=np.float32)
     for i in range(nt):
-        lamb2[:,:,:,i] = lambda2single(datau,datav,dataw,t,dx,dy,dz)
+        percent = np.str(np.round(i/nt*100))+"%"
+        print('{}\r'.format(percent), end="")
+        lamb2[:,:,:,i] = lambda2single(datau,datav,dataw,i,dx,dy,dz)
     print('{}\r'.format("Lambda2 Vortex Identification Completed "), end="")
     return lamb2
-def cart2pol(datau,datav,dataw,dx,dy,dz):
 
+def cart2pol(datau,datav,dataw,dx,dy,dz):
     #cal nx ny nz nt
     if (sameshape3(datau,datav,dataw) is False):
         return
@@ -545,33 +550,25 @@ def generate_video(path,videopath = 'None',speed = 5):
                  img.endswith(".jpeg") or
                  img.endswith("png")] 
      
-    # Array images should only consider 
-    # the image files ignoring others if any 
-#     print(images)  
-  
+
     frame = cv2.imread(os.path.join(image_folder, images[0])) 
   
-    # setting the frame width, height width 
-    # the width, height of first image 
+  
     height, width, layers = frame.shape   
     speed = np.int(speed)
     if (videopath != 'None'):
         video_name = videopath +'\\'+video_name
-#         if not os.path.exists(videopath):
-#             os.makedirs(videopath)
     video = cv2.VideoWriter(video_name, 0, speed, (width, height))  
   
-    # Appending the images to the video one by one 
     for image in images:  
         video.write(cv2.imread(os.path.join(image_folder, image)))  
       
-    # Deallocating memories taken for window creation 
     cv2.destroyAllWindows()  
-    video.release()  # releasing the video generated 
+    video.release() 
 
 
     
-def isosurface(data,isovalue,name, dpi =30,frame = 5,angle = 60,dx=40,dy=40,dz=10,D=400):
+def isosurface(data,isovalue,name, dpi =30,frame = 5,angleH = 15, angleV = 60,dx=40,dy=40,dz=10,D=400):
     import os
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -607,7 +604,7 @@ def isosurface(data,isovalue,name, dpi =30,frame = 5,angle = 60,dx=40,dy=40,dz=1
         mesh = Poly3DCollection(verts[faces])
         mesh.set_edgecolor('k')
         ax.add_collection3d(mesh)
-        ax.view_init(15,angle)
+        ax.view_init(angleH,angleV)
 
         ax.set_xlabel("X/D",fontsize = 50,labelpad=40)
         ax.set_ylabel("Y/D",fontsize = 50,labelpad=40)
@@ -720,54 +717,149 @@ def isosurface_timestep(data,timestep,isovalue,name, dpi =30,frame = 9,dx=40,dy=
         plt.cla()
         angle = angle + frame
 
-
-def uvw_import(path,filename,start,end,nx=45,ny=45,nz=700):
-    import pandas as pd #reading data from csv
+def loadcsv_partial(filename,start,end,nx=45,ny=45,nz=700):
     import pandas as pd #reading data from csv
     sk = start*nx*ny*nz
     nt = end - start
     n = np.int(nx*ny*nz*nt)
-    dfu = pd.read_csv(path+'\\'+filename+'_U.csv',skiprows = sk,nrows = 2, header = None)
-    check = str(dfu[0][0])
-    if(check.isnumeric()):
-        print('')
-    else:
+    df = pd.read_csv(filename,skiprows = sk,nrows = 2, header = None)
+    check = df[0][0]
+    if(type(check) == str):
         sk = sk+1
-
-    # U data
-    dfu = pd.read_csv(path+'\\'+filename+'_U.csv',skiprows = sk,nrows = n, dtype =np.float32, header = None)
-    datau = dfu.to_numpy()
-    datau = np.reshape(datau,  (nx,ny,nz,nt), order="F")
-    del dfu
-
-    # V data
-    dfv = pd.read_csv(path+'\\'+filename+'_V.csv',skiprows = sk,nrows = n, dtype =np.float32, header = None)
-    datav = dfv.to_numpy()
-    datav = np.reshape(datav,  (nx,ny,nz,nt), order="F")
-    del dfv
-
-    # W data
-    dfw = pd.read_csv(path+'\\'+filename+'_U.csv',skiprows = sk,nrows = n, dtype =np.float32, header = None)
-    dataw = dfw.to_numpy()
-    dataw = np.reshape(dataw,  (nx,ny,nz,nt), order="F")
-    del dfw
-    
-    return datau,datav,dataw
-
-def datasingle_import(path,filename,start,end,nx=45,ny=45,nz=700,):
-    import pandas as pd #reading data from csv
-    import pandas as pd #reading data from csv
-    sk = start*nx*ny*nz
-    nt = end - start
-    n = np.int(nx*ny*nz*nt)
-    df = pd.read_csv(path+'\\'+filename+'.csv',skiprows = sk,nrows = 2, header = None)
-    check = str(int(df[0][0]))
-    if(check.isnumeric()):
-        print('')
-    else:
-        sk = sk+1
-    df = pd.read_csv(path+'\\'+filename+'.csv',skiprows = sk,nrows = n, dtype =np.float32, header = None)
+    df = pd.read_csv(filename,skiprows = sk,nrows = n, dtype =np.float32, header = None)
     data = df.to_numpy()
     data = np.reshape(data,  (nx,ny,nz,nt), order="F")
     del df
     return data
+
+def loadcsv(filename,nx=45,ny=45,nz=700):
+    import pandas as pd #reading data from csv
+    sk = 0
+    df = pd.read_csv(filename,skiprows = sk,nrows = 2, header = None)
+    check = df[0][0]
+    if(type(check) == str):
+        sk = sk+1
+    df = pd.read_csv(filename,skiprows = sk, dtype =np.float32, header = None)
+    data = df.to_numpy()
+    datasize = np.shape(data)[0]
+    nt = int(datasize /nx/ny/nz)
+    data = np.reshape(data,  (nx,ny,nz,nt), order="F")
+    del df
+    return data
+
+# def csv2mat(filename,nx=45,ny=45,nz =700,nt = 540):
+#     from scipy import io
+#     import numpy as np
+#     import LESbplume as lp
+#     import pandas as pd #reading data from csv
+
+
+#     sk = 0
+#     n = nx*ny*nz*nt
+#     df = pd.read_csv(filename,nrows = 2, header = None)
+#     check = df[0][0]
+#     if(type(check) == str):
+#         sk = sk+1
+#     df = pd.read_csv(filename,skiprows = sk,nrows = n, dtype =np.float32, header = None)
+#     data = df.to_numpy()
+#     data = np.reshape(data,  (nx,ny,nz,nt), order="F")
+#     del df
+
+#     t = 0
+#     matname = ""
+#     for i in range(len(filename)-1,0,-1):
+#         if (filename[i] == '.'):
+#             filename = filename[:i]
+#             break
+#         filename = filename[:i]
+#         t = 1  
+#     io.savemat(filename+".mat", {"data": data})
+    
+def loadmat(filename):
+    from scipy import io
+    import numpy as np
+    import mat73
+    try:
+        data = io.loadmat(filename)
+        key = sorted(data.keys(),reverse=True)[0]
+#         key = sorted(data.keys())[0]
+        data = data[key]
+        data = np.array(data)
+    except:
+        data = mat73.loadmat(filename)
+        key = sorted(data.keys(),reverse=True)[0]
+#         key = sorted(data.keys())[0]
+        data = data[key]
+        data = np.array(data)
+    return data
+
+def savemat(data,filename):
+    from scipy import io
+    try:
+        io.savemat(filename+".mat", {"data": data})
+    except:
+        data = np.array(data,dtype=np.float32)
+        io.savemat(filename+".mat", {"data": data})
+
+def helicity(datau,datav,dataw,dx=40,dy=40,dz=10):
+    if (sameshape3(datau,datav,dataw) is False):
+        return
+    np.seterr(divide='ignore', invalid='ignore')
+    nx, ny, nz, nt = shape(datau)
+    H_n = np.zeros((nx,ny,nz,nt), dtype = np.float32)
+    H=H_n
+    for t in range (nt):
+        percent = np.str(np.round(t/datau.shape[3]*100))+"%"
+        print('{}\r'.format(percent), end="")
+        dudy,dudx,dudz= np.gradient(datau[:,:,:,t],dx,dy,dz)
+        dvdy,dvdx,dvdz = np.gradient(datav[:,:,:,t],dx,dy,dz)
+        dwdy,dwdx,dwdz = np.gradient(dataw[:,:,:,t],dx,dy,dz)
+        u = datau[:,:,:,t]
+        v = datav[:,:,:,t]
+        w = dataw[:,:,:,t]
+        Vorticity_x = dwdy - dvdz
+        Vorticity_y= dudz - dwdx
+        Vorticity_z= dvdx - dudy
+        H_n[:,:,:,t]=(u*Vorticity_x+v*Vorticity_y+w*Vorticity_z)/(np.sqrt(u**2+v**2+w**2)*np.sqrt(Vorticity_x**2+Vorticity_y**2+Vorticity_z**2));
+        H[:,:,:,t]=(u*Vorticity_x+v*Vorticity_y+w*Vorticity_z);
+    
+    print('Helicity Vortex Identification Completed')
+    return H_n
+
+def filmax(data):
+    for i in range(0,np.size(data)):
+        if data[i] == np.max(data):
+            data = data[:i]
+            return data
+def frontvelocity(data,threshold=0.0001,dt=10,dz=10,D=400):
+    data = data/np.max(data)
+    data = np.mean(data,0)
+    data = np.mean(data,0)
+    plheight = np.zeros(np.shape(data)[1])
+    for i in range(np.shape(data)[1]):
+        for j in range (np.shape(data)[0]):
+            if data[j,i] >= threshold:
+                plheight[i]=j*dz/D;
+    plheight = filmax(plheight)
+    plheight = np.gradient(plheight)/dt
+    return plheight
+
+def frontvelocityplot(data,dataname,dt=10,marksize=250):
+    plt.figure(figsize=(10,5))
+    color = 'k'
+    nt = np.shape(data)[0]
+    x = list(range(0,(nt)*dt,dt))
+    plt.plot(x[0:np.shape(data)[0]],data,color = color)
+    plt.locator_params(axis='x', nbins=300)
+    plt.grid()
+    plt.xticks(np.arange(min(x), max(x)+1, marksize))
+    plt.ylabel('Wf/D');plt.xlabel('Time')
+    plt.savefig(dataname +' Front Velocity.png')
+    
+def wcmax(data):
+    nx,ny,nz,nt = np.shape(data)
+    data = np.mean(data,3)
+    x = int((nx-1)/2)
+    wc = np.max(data[x,x,:])
+    print(wc)
+    return wc

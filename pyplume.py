@@ -159,7 +159,6 @@ def omega_single(datau,datav,dataw,dx,dy,dz,t):
     gv = np.gradient(datav[:,:,:,t],dx,dy,dz)
     gw = np.gradient(dataw[:,:,:,t],dx,dy,dz)
     
-  
     GV = np.array([[gu[1],gv[1],gw[1]],[gu[0],gv[0],gw[0]],[gu[2],gv[2],gw[2]]])
     GVT = transpose(GV)
 
@@ -552,17 +551,14 @@ def generate_video(path,videopath = 'None',speed = 5):
      
 
     frame = cv2.imread(os.path.join(image_folder, images[0])) 
-  
-  
+
     height, width, layers = frame.shape   
     speed = np.int(speed)
     if (videopath != 'None'):
         video_name = videopath +'\\'+video_name
     video = cv2.VideoWriter(video_name, 0, speed, (width, height))  
-  
     for image in images:  
         video.write(cv2.imread(os.path.join(image_folder, image)))  
-      
     cv2.destroyAllWindows()  
     video.release() 
 
@@ -737,8 +733,10 @@ def loadcsv(filename,nx=45,ny=45,nz=700):
     sk = 0
     df = pd.read_csv(filename,skiprows = sk,nrows = 2, header = None)
     check = df[0][0]
-    if(type(check) == str):
-        sk = sk+1
+    try:
+        check = check+1
+    except:
+        sk = 1
     df = pd.read_csv(filename,skiprows = sk, dtype =np.float32, header = None)
     data = df.to_numpy()
     datasize = np.shape(data)[0]
@@ -747,34 +745,6 @@ def loadcsv(filename,nx=45,ny=45,nz=700):
     del df
     return data
 
-# def csv2mat(filename,nx=45,ny=45,nz =700,nt = 540):
-#     from scipy import io
-#     import numpy as np
-#     import LESbplume as lp
-#     import pandas as pd #reading data from csv
-
-
-#     sk = 0
-#     n = nx*ny*nz*nt
-#     df = pd.read_csv(filename,nrows = 2, header = None)
-#     check = df[0][0]
-#     if(type(check) == str):
-#         sk = sk+1
-#     df = pd.read_csv(filename,skiprows = sk,nrows = n, dtype =np.float32, header = None)
-#     data = df.to_numpy()
-#     data = np.reshape(data,  (nx,ny,nz,nt), order="F")
-#     del df
-
-#     t = 0
-#     matname = ""
-#     for i in range(len(filename)-1,0,-1):
-#         if (filename[i] == '.'):
-#             filename = filename[:i]
-#             break
-#         filename = filename[:i]
-#         t = 1  
-#     io.savemat(filename+".mat", {"data": data})
-    
 def loadmat(filename):
     from scipy import io
     import numpy as np
@@ -782,13 +752,11 @@ def loadmat(filename):
     try:
         data = io.loadmat(filename)
         key = sorted(data.keys(),reverse=True)[0]
-#         key = sorted(data.keys())[0]
         data = data[key]
         data = np.array(data)
     except:
         data = mat73.loadmat(filename)
         key = sorted(data.keys(),reverse=True)[0]
-#         key = sorted(data.keys())[0]
         data = data[key]
         data = np.array(data)
     return data
@@ -800,6 +768,15 @@ def savemat(data,filename):
     except:
         data = np.array(data,dtype=np.float32)
         io.savemat(filename+".mat", {"data": data})
+
+def csv2mat(filename,nx=45,ny=45,nz =700,nt = 540):
+    from scipy import io
+    import numpy as np
+    import LESbplume as lp
+    import pandas as pd #reading data from csv
+
+    data = loadcsv(filename,nx,ny,nz)
+    savemat(data,filename)
 
 def helicity(datau,datav,dataw,dx=40,dy=40,dz=10):
     if (sameshape3(datau,datav,dataw) is False):
@@ -831,7 +808,12 @@ def filmax(data):
         if data[i] == np.max(data):
             data = data[:i]
             return data
-def frontvelocity(data,threshold=0.0001,dt=10,dz=10,D=400):
+        
+def gprimeT(data,t0=300,g=9.81):
+    data = data*g/t0
+    return data
+        
+def plumeheight(data,threshold=0.001,dt=10,dz=10,D=400):
     data = data/np.max(data)
     data = np.mean(data,0)
     data = np.mean(data,0)
@@ -840,6 +822,10 @@ def frontvelocity(data,threshold=0.0001,dt=10,dz=10,D=400):
         for j in range (np.shape(data)[0]):
             if data[j,i] >= threshold:
                 plheight[i]=j*dz/D;
+    return plheight
+
+def frontvelocity(data,threshold=0.001,dt=10,dz=10,D=400):
+    plheight = plumeheight(data,threshold,dt,dz,D)
     plheight = filmax(plheight)
     plheight = np.gradient(plheight)/dt
     return plheight
@@ -856,10 +842,77 @@ def frontvelocityplot(data,dataname,dt=10,marksize=250):
     plt.ylabel('Wf/D');plt.xlabel('Time')
     plt.savefig(dataname +' Front Velocity.png')
     
-def wcmax(data):
+def plumeradius_timeaverage(data,threshold=0.0001,dx=40,D=400):
+    nx,ny,nz,nt = np.shape(data)
+    data = data/np.max(data)
+    data = np.mean(np.mean(data,3),0)
+    a = data
+    sizea = int((nx+1)*0.5)
+    b = a[0:sizea][::-1]
+    c = a[sizea-1:nx]
+    d = (b+c)*0.5
+    radius = np.zeros(700)
+    for z in range(nz):
+        for r in range(sizea):
+            if(d[r,z]>=threshold):
+                radius[z] = (r+1)*dx/D               
+    radius =  radius
+    return radius
+    
+def wcentermax(data,dz=10,D=400):
+    nx,ny,nz,nt = np.shape(data)
+    data = np.mean(data,3)
+    c = int((nx-1)/2)
+    maxc = max(data[c,c,:])
+    for i in range(nz):
+        if (maxc==data[c,c,i]):
+            cl = i+1
+    cl = cl
+    return maxc,cl
+
+def reynoldswc(gT,W,threshold=0.0001,dx=40,dz=10,D=400,v=0.00004765):
+    wc, cl = wcentermax(W,dz,D)
+    r = plumeradius_timeaverage(gT,threshold,dx,D)
+    l = r[cl]
+    re = wc*l*D/v
+#     print("Renold(wc): ",re)
+#     print("l: ",l)
+#     print("wc: ",wc)
+    return re
+
+def gT0(data):
     nx,ny,nz,nt = np.shape(data)
     data = np.mean(data,3)
     x = int((nx-1)/2)
-    wc = np.max(data[x,x,:])
-    print(wc)
-    return wc
+    gT =data[x,x,1]
+    return gT
+
+def wb(data,D):
+    nx,ny,nz,nt = np.shape(data)
+    data = np.mean(data,3)
+    x = int((nx-1)/2)
+    wb = np.sqrt(data[x,x,1]*D)
+#     print(wb)
+    return wb
+
+def froudewc(gT,W,dz=10,D=400):
+    wc, cl = wcentermax(W,dz,D)
+    wbouyance = wb(gT,D)
+    fr = wc/wbouyance
+#     print("Froude(wc): ",fr)
+    return fr
+
+class Plume:
+    def __init__(self, dataT,dataW,dx=40,dy=40,dz=10,dt=10,D=400):
+        self.T = gprimeT(dataT)
+        self.W = dataW
+        self.gprimeT0 = gT0(dataT)
+        self.wcmax,self.wcmax_location = wcentermax(self.W ,dz=10,D=400)
+        self.zwcm = self.wcmax_location*dz/D
+        self.rtimeaverage = plumeradius_timeaverage(self.T,threshold=0.0001,dx=40,D=400)
+        self.lwcm = self.rtimeaverage[self.wcmax_location]
+        self.Rewc = reynoldswc(self.T,self.W,threshold=0.0001,dx=40,dz=10,D=400,v=0.00004765)
+        self.height = plumeheight(self.T,threshold=0.0001,dt=10,dz=10,D=400);
+        self.frontvelocity = frontvelocity(self.T,threshold=0.0001,dt=10,dz=10,D=400);
+        self.Froudewc = froudewc(self.T,self.W,dz=10,D=400);
+        self.wfs = np.mean(self.frontvelocity[int(np.shape(self.frontvelocity)[0]/1.5):])

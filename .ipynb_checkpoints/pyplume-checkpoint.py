@@ -1087,6 +1087,7 @@ class plume_centerline_metrics:
         
 class high_frequency_profile:
     def __init__(self,T,U,V,W,dx,dz,D,Ta,g,threshold):
+        nx,nz,nt = np.shape(T)
         T = T - Ta
         T = gprimeT(T,Ta,g)
         self.interface = hf_plume_interface(T,threshold)
@@ -1096,14 +1097,17 @@ class high_frequency_profile:
         V = fluctuation(V)
         W = fluctuation(W)
         T = fluctuation(T)
-        nx,nz = np.shape(T)
+        nx,nz,nt = np.shape(T)
         self.Re_stress_UW = np.mean(U*W,2)
         self.Re_stress_VW = np.mean(V*W,2)
+        self.Re_stress_UU = np.mean(U*U,2)
+        self.Re_stress_VV = np.mean(V*V,2)
+        self.Re_stress_WW = np.mean(W*W,2)
         self.TKE_shear_pro_UW = -(self.Re_stress_UW*shear)
         self.TKE_shear_pro_VW = -(self.Re_stress_VW*shear)
         self.TKE_buoyant_production_I = np.mean(W*T,2)
         self.TKE_buoyant_production_II = self.TKE_buoyant_production_I*dTdz
-        self.TKE = np.mean(U*U,2)+np.mean(V*V,2)+np.mean(W*W,2)
+        self.TKE = self.Re_stress_UU+self.Re_stress_VV+self.Re_stress_WW
         self.Re_stress_UW_centerline = self.Re_stress_UW[int((nx-1)/2),:]
         
 

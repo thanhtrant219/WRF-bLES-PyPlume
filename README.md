@@ -17,3 +17,8 @@ This python program was created in JupyterLab which included in the Anaconda pro
 https://www.anaconda.com/products/individual 
 
 After install Anaconda, Open up either JupyterLab or Jupyter Notebook to run the python program.
+
+### TODO's 
+- Testing to see if this even works the way I intend it to.
+
+

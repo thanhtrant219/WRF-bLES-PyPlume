@@ -10,6 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import time
 import sys
+import os
 
 
 # In[2]:
@@ -906,7 +907,7 @@ def hf_loadcsv(filename):
     temp = temp.T
     return temp
 
-def hf_fulldata(folder,dataname,nx):
+def hf_loadcsvfulldata(folder,dataname,nx):
     temp= hf_loadcsv(folder+'\\c0001.d01.'+dataname)
     nz,nt = np.shape(temp)
     hfdata = np.zeros((nx,nz,nt))
@@ -926,7 +927,7 @@ def hf_csv2mat(folder,datatype,nx):
 def hf_loadmat(file):
     d1 = loadmat(file+"_1.mat")
     d2 = loadmat(file+"_2.mat")
-    data = np.concatenate((d1,d2),axis=0)
+    data = np.concatenate((d1,d2),axis=3)
     return data
 
 def fluctuation(data):
@@ -1100,9 +1101,9 @@ class high_frequency_profile:
         nx,nz,nt = np.shape(T)
         self.Re_stress_UW = np.mean(U*W,2)
         self.Re_stress_VW = np.mean(V*W,2)
-        self.Re_stress_UU = np.mean(U*U,2)
-        self.Re_stress_VV = np.mean(V*V,2)
-        self.Re_stress_WW = np.mean(W*W,2)
+        self.U_rms = np.mean(U*U,2)
+        self.V_rms = np.mean(V*V,2)
+        self.W_rms = np.mean(W*W,2)
         self.TKE_shear_pro_UW = -(self.Re_stress_UW*shear)
         self.TKE_shear_pro_VW = -(self.Re_stress_VW*shear)
         self.TKE_buoyant_production_I = np.mean(W*T,2)
@@ -1115,26 +1116,35 @@ class high_frequency_profile:
         self.TKE_centerline = self.TKE[centerline,:]
         self.TKE_buoyant_production_I_centerline = self.TKE_buoyant_production_I[centerline,:]
         self.TKE_buoyant_production_II_centerline = self.TKE_buoyant_production_II[centerline,:]
+        self.TKE_shear_pro_UW_centerline = self.TKE_shear_pro_UW[centerline,:]
+        self.TKE_shear_pro_VW_centerline = self.TKE_shear_pro_VW[centerline,:]
         
-        # Plot
-        mark = 20
-        plt.figure(figsize=(10, 7))
-        zi = np.linspace(0, nz*dz/D, nz)
-        plotdata = U_rms_centerline/U_rms_centerline.max()
-        plt.plot(zi,plotdata,'go--', label='U_rms_centerline', markevery = mark, linewidth=3)
-        plotdata = V_rms_centerline/V_rms_centerline.max()
-        plt.plot(zi,plotdata,'bs--', label='V_rms_centerline',markevery = mark, linewidth=3)
-        plotdata = W_rms_centerline/W_rms_centerline.max()
-        plt.plot(zi,plotdata,'rv--', label='W_rms_centerline',markevery = mark, linewidth=3)
-        plotdata = TKE_centerline/TKE_centerline.max()
-        plt.plot(zi,plotdata,'c8--', label='TKE_centerline',markevery = mark, linewidth=3)
-        plotdata = TKE_buoyant_production_I_centerline/TKE_buoyant_production_I_centerline.max()
-        plt.plot(zi,plotdata,'yx--', label='TKE_buoyant_production_I_centerline',markevery = mark, linewidth=3)
-        plotdata = TKE_buoyant_production_II_centerline/TKE_buoyant_production_II_centerline.max()
-        plt.plot(zi,plotdata,'kp--', label='TKE_buoyant_production_II_centerline', markevery = mark,linewidth=3)
-        plt.legend()
-        plt.xlabel("$z/D$")
-        plt.savefig("HighFrequency_Centerline_Profile.png")
+#         mark = 20
+#         plt.figure(figsize=(10, 7))
+#         zi = np.linspace(0, nz*dz/D, nz)
+#         plotdata = self.U_rms_centerline/self.U_rms_centerline.max()
+#         plt.plot(zi,plotdata,'bo--', label='U_rms_centerline', markevery = mark, linewidth=3)
+#         plotdata = self.V_rms_centerline/self.V_rms_centerline.max()
+#         plt.plot(zi,plotdata,'gs--', label='V_rms_centerline',markevery = mark, linewidth=3)
+#         plotdata = self.W_rms_centerline/self.W_rms_centerline.max()
+#         plt.plot(zi,plotdata,'rv--', label='W_rms_centerline',markevery = mark, linewidth=3)
+#         plotdata = self.TKE_centerline/self.TKE_centerline.max()
+#         plt.plot(zi,plotdata,'c8--', label='TKE_centerline',markevery = mark, linewidth=3)
+#         plotdata = self.TKE_buoyant_production_I_centerline/self.TKE_buoyant_production_I_centerline.max()
+#         plt.plot(zi,plotdata,'mx--', label='TKE_buoyant_production_I_centerline',markevery = mark, linewidth=3)
+#         plotdata = self.TKE_buoyant_production_II_centerline/self.TKE_buoyant_production_II_centerline.max()
+#         plt.plot(zi,plotdata,'yp--', label='TKE_buoyant_production_II_centerline', markevery = mark,linewidth=3)
+#         plotdata = self.TKE_shear_pro_UW_centerline/self.TKE_shear_pro_UW_centerline.max()
+#         plt.plot(zi,plotdata,'kD--', label='TKE_shear_pro_UW_centerline', markevery = mark,linewidth=3)
+#         plotdata = self.TKE_shear_pro_VW_centerline/self.TKE_shear_pro_VW_centerline.max()
+#         plt.plot(zi,plotdata,'o|--', label='TKE_shear_pro_VW_centerline', markevery = mark,linewidth=3)
+#         plt.legend()
+#         plt.xlabel("$z/D$")
+#         current_directory = os.getcwd()
+#         final_directory = os.path.join(current_directory, r'Plots')
+#         if not os.path.exists(final_directory):
+#            os.makedirs(final_directory) 
+#         plt.savefig(final_directory+"\\HighFrequency_Centerline_Profile.png")
         
 
 class plume_polar_coordinates:

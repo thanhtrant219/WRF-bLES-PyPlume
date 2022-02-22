@@ -1,12 +1,12 @@
 INTRO:
 
-LESbplume.py is a python package that included functions to process and visualize LES bplume data.
+PyPlume.py is a python package that included functions to process and visualize LES bplume data.
 
 CONTENTS: 
 
 There are 3 files in the folder. Please always keep all the files in a same folder. 
 
-	- LESblume.py and multifluidlab.py are the python module itself.
+	- PyPlume.py and multifluidlab.py are the python module itself.
 
 	- Examples.ipynb is file that user would open by JupyterLab or Jupyter 	Notebook. 	This file demonstrated all the functions within the LESbplume module.
 

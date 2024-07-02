@@ -18,8 +18,4 @@ https://www.anaconda.com/products/individual
 
 After installation of Anaconda, open up either JupyterLab or Jupyter Notebook to run the python program.
 
-### TODO's 
-- Centerline profile plots.
-- Testing for Carbon Dioxde Cases - JS.
-- Rename variables with conistent naming scheme.
 

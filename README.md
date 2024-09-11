@@ -1,4 +1,4 @@
-# WRF-LES-PyPlume-Python-Code
+# WRF-LES-PyPlume Software
 
 INTRO:
 PyPlume.py is a python package that includes functions to process and visualize WRF-bPlume LES data.

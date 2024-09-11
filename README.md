@@ -19,3 +19,6 @@ https://www.anaconda.com/products/individual
 After installation of Anaconda, open up either JupyterLab or Jupyter Notebook to run the python program.
 
 
+Dependencies: numpy=1.16.5 or higher, matplotlib = 3.3.0 or higher, Jupyter Notebook, Anaconda. The WRF-bLES-PyPlume library is installed by using pip install on the command line “ pip install
+ pyplumewrfles ”. It should be noted that first an upgrade is performed with pip install using the
+command line “ python -m pip install –upgrade pip ”
